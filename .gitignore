@@ -1,0 +1,6 @@
+backend/models/
+backend/Miniforge3-MacOSX-arm64.sh
+backend/Dockerfile
+backend/data
+backend/bm25_indexes
+backend/analysis_results
