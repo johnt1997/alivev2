@@ -23,7 +23,7 @@ import {
   Stack,
   useToast,
 } from "@chakra-ui/react";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useState, useRef } from "react";
 import { Switch } from "@chakra-ui/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -122,6 +122,25 @@ export const SideBar: FC<SideBarProps> = ({
   const [selectedLanguageInit, setSelectedLanguageInit] =
     useState<string>("en");
   const toast = useToast();
+  const alertedRef = useRef(false);
+
+  // Teilt durch 3 und clamped auf Slider-Min (200)
+  const adjustForSentenceTransformer = (val: number) =>
+    Math.max(200, Math.floor(Number(val) / 3));
+
+  const notifyOnce = (msg: string) => {
+    if (alertedRef.current) return;
+    toast({
+      title: "Chunk Size angepasst",
+      description: msg,
+      status: "info",
+      duration: 4000,
+      isClosable: true,
+      position: "top",
+    });
+    alertedRef.current = true;
+    setTimeout(() => (alertedRef.current = false), 4000);
+  };
 
   useEffect(() => {
     const checkOpenAI = async () => {
@@ -166,6 +185,23 @@ export const SideBar: FC<SideBarProps> = ({
   }, [selectedPerson]);
 
   useEffect(() => {
+    if (splitterType === "semantic") {
+      // Informiere den User: Size & Overlap sind im Backend auto=0
+      toast({
+        title: "Semantic Chunking aktiv",
+        description:
+          "Chunk Size und Overlap sind automatisch 0 (werden ignoriert).",
+        status: "info",
+        duration: 4000,
+        isClosable: true,
+        position: "top",
+      });
+    }
+    // nur auf Wechsel reagieren
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splitterType]);
+
+  useEffect(() => {
     const fetchPersons = async () => {
       setGlobalDisabled((value) => Math.max(value + 1, 0));
       const response = await getAllPersons();
@@ -192,6 +228,23 @@ export const SideBar: FC<SideBarProps> = ({
 
     fetchPersons();
   }, []);
+
+  useEffect(() => {
+    if (splitterType === "sentence_transformer") {
+      const adjusted = adjustForSentenceTransformer(chunkSize);
+      if (adjusted !== chunkSize) {
+        setChunkSize(adjusted);
+        if (chunkOverlap > adjusted) {
+          setChunkOverlap(Math.floor(adjusted / 2));
+        }
+        notifyOnce(
+          `Sentence-Transformer nutzt kleinere Chunks — effektive Chunk Size: ${adjusted} (Eingabe ÷ 3).`
+        );
+      }
+    }
+    // absichtlich nur bei Splitterwechsel auslösen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splitterType]);
 
   const revertChanges = () => {
     setSelectedPerson(selected);
@@ -389,7 +442,7 @@ export const SideBar: FC<SideBarProps> = ({
 
           <Box p={4} pt={0}>
             <p className="text-black self-center text-sm">
-              Chunk Size {chunkSize}
+              Chunk Size {splitterType === "semantic" ? "auto" : chunkSize}
             </p>
 
             <Slider
@@ -399,7 +452,8 @@ export const SideBar: FC<SideBarProps> = ({
                 loading ||
                 globalDisabled !== 0 ||
                 selected == undefined ||
-                selected == ""
+                selected == "" ||
+                splitterType === "semantic"
               }
               defaultValue={chunkSize}
               value={chunkSize}
@@ -407,7 +461,18 @@ export const SideBar: FC<SideBarProps> = ({
               max={4000}
               step={100}
               onChange={(value) => {
-                setChunkSize(value);
+                if (splitterType === "sentence_transformer") {
+                  const adjusted = adjustForSentenceTransformer(value);
+                  setChunkSize(adjusted);
+                  if (chunkOverlap > adjusted) {
+                    setChunkOverlap(Math.floor(adjusted / 2));
+                  }
+                  notifyOnce(
+                    `Sentence-Transformer nutzt kleinere Chunks — effektive Chunk Size: ${adjusted} (Eingabe ÷ 3).`
+                  );
+                } else {
+                  if (splitterType !== "semantic") setChunkSize(value);
+                }
               }}
             >
               <SliderMark value={200} {...labelStyles}>
@@ -438,7 +503,8 @@ export const SideBar: FC<SideBarProps> = ({
                 loading ||
                 globalDisabled !== 0 ||
                 selected == undefined ||
-                selected == ""
+                selected == "" ||
+                splitterType === "semantic"
               }
               defaultValue={chunkOverlap}
               value={chunkOverlap}
@@ -446,7 +512,7 @@ export const SideBar: FC<SideBarProps> = ({
               max={500}
               step={10}
               onChange={(value) => {
-                setChunkOverlap(value);
+                if (splitterType !== "semantic") setChunkOverlap(value);
               }}
             >
               <SliderMark value={0} {...labelStyles}>

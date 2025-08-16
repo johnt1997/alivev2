@@ -30,6 +30,39 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])
 
+
+
+MIN_SENT_CHUNK = 200  # wie im Frontend, nur für sentence_transformer
+
+def normalize_chunk_params(splitter: str, chunk_size: int, chunk_overlap: int) -> tuple[int, int]:
+    # Defaults
+    if not isinstance(chunk_size, int) or chunk_size <= 0:
+        chunk_size = CHUNK_SIZE
+    if not isinstance(chunk_overlap, int) or chunk_overlap < 0:
+        chunk_overlap = CHUNK_OVERLAP
+
+    # 🔒 semantic: vollständig automatisch, pfadstabil via (0,0)
+    if splitter == "semantic":
+        if (chunk_size, chunk_overlap) != (0, 0):
+            print(f"[INFO] normalize (semantic): forcing chunk_size=0, overlap=0 (auto mode)")
+        return 0, 0
+
+    # sentence_transformer: still ÷3 + Mindestgröße
+    if splitter == "sentence_transformer":
+        eff = max(MIN_SENT_CHUNK, chunk_size // 3)
+        if eff != chunk_size:
+            print(f"[INFO] normalize (sentence_transformer): {chunk_size} -> {eff}")
+        chunk_size = eff
+
+    # Overlap-Guard
+    if chunk_overlap >= chunk_size:
+        new_overlap = max(0, chunk_size // 2)
+        print(f"[WARN] chunk_overlap >= chunk_size; adjusting {chunk_overlap} -> {new_overlap}")
+        chunk_overlap = new_overlap
+
+    return chunk_size, chunk_overlap
+
+
 @app.route("/has-openai-api-key", methods=["GET"])
 def has_openai_api_key():
     try:
@@ -467,7 +500,8 @@ def ask_question():
         "splitter_type": request.args.get("splitter_type", default="recursive", type=str),
         "eyewitness_mode": string_to_bool(request.args.get("eyewitness_mode", default="True", type=str))
     }
-
+    print("xxxxxxx")
+    print(params["use_reranker"])
     if not params["person_name"] or not params["question"]:
         abort(400, "Person and question must be specified.")
 
@@ -477,7 +511,11 @@ def ask_question():
         print(f"[WARN] Invalid splitter type '{params['splitter_type']}', defaulting to 'semantic'.")
         params["splitter_type"] = "semantic"
 
-        
+    # 🔒 EINHEITLICHE SERVERSEITIGE NORMALISIERUNG
+    params["chunk_size"], params["chunk_overlap"] = normalize_chunk_params(
+        params["splitter_type"], params["chunk_size"], params["chunk_overlap"]
+    )
+
     print(f"[INFO] Request for '{params['person_name']}', splitter='{params['splitter_type']}', reranker={params['use_reranker']}")
 
     # QA-Chain über die Hilfsfunktion holen
