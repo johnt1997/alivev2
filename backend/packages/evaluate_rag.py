@@ -17,7 +17,7 @@ from ragas.metrics import (
     answer_correctness
 )
 
-# Importiere deine Klassen
+
 from packages.init_chain import InitializeQuesionAnsweringChain
 from packages.person import Person
 
@@ -40,14 +40,8 @@ class EvaluationPipeline:
         for question in tqdm(self.eval_questions, desc="Generating Answers"):
             
             start_time = time.time()
-            # Nutze die neue, saubere 'answer'-Methode
             answer, docs_with_scores, meta = self.qa_chain.answer(question)
             end_time = time.time()
-            
-            # Extrahiere den internen Factual-Score
-            # HINWEIS: Hierfür muss die 'answer'-Methode angepasst werden,
-            # um auch das 'dict_query' zurückzugeben
-            # factuality_score = ... 
 
             results.append({
                 "question": question,

@@ -133,7 +133,8 @@ def _get_qa_chain_and_person(params: Dict):
         person=person,
         search_kwargs_num=params["search_kwargs_num"],
         language=params["language"],
-        use_reranker=params["use_reranker"]
+        use_reranker=params["use_reranker"],
+        eyewitness_mode=params["eyewitness_mode"]
     )
     
     return qa_chain, person
@@ -455,25 +456,27 @@ def ask_question():
         "person_name": request.args.get("person", default="", type=str),
         "question": request.args.get("question", default="", type=str),
         "voice": request.args.get("voice", default="Male", type=str),
-        "chunk_size": request.args.get("chunk_size", default=500, type=int),
-        "chunk_overlap": request.args.get("chunk_overlap", default=100, type=int),
+        "chunk_size": request.args.get("chunk_size", default=-1, type=int),
+        "chunk_overlap": request.args.get("chunk_overlap", default=-1, type=int),
         "temperature": request.args.get("temperature", default=TEMPERATURE, type=float),
         "search_kwargs_num": request.args.get("search_kwargs_num", default=SEARCH_KWARGS_NUM, type=int),
         "use_openai": string_to_bool(request.args.get("use_openai", default="False", type=str)),
         "language": request.args.get("language", default="en", type=str),
-        "retrieval_mode": request.args.get("retrieval_mode", default="dense", type=str),
-        "use_reranker": string_to_bool(request.args.get("use_reranker", default="True", type=str)),
-        "splitter_type": request.args.get("splitter", default="semantic", type=str)
+        "retrieval_mode": request.args.get("retrieval_mode", default="hybrid", type=str),
+        "use_reranker": string_to_bool(request.args.get("use_reranker", default="False", type=str)),
+        "splitter_type": request.args.get("splitter_type", default="recursive", type=str),
+        "eyewitness_mode": string_to_bool(request.args.get("eyewitness_mode", default="True", type=str))
     }
 
     if not params["person_name"] or not params["question"]:
         abort(400, "Person and question must be specified.")
 
     # Validierung des Splitter-Typs
-    allowed_splitters: List[SplitterType] = ["recursive", "sentence_transformer", "semantic"]
+    allowed_splitters = ["recursive", "sentence_transformer", "semantic"]
     if params["splitter_type"] not in allowed_splitters:
         print(f"[WARN] Invalid splitter type '{params['splitter_type']}', defaulting to 'semantic'.")
         params["splitter_type"] = "semantic"
+
         
     print(f"[INFO] Request for '{params['person_name']}', splitter='{params['splitter_type']}', reranker={params['use_reranker']}")
 

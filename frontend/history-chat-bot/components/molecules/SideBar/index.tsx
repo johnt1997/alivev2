@@ -51,7 +51,15 @@ interface SideBarProps {
   setUseOpenai: (useOpenai: boolean) => void;
   useEyewitnessMode: boolean;
   setEyewitnessMode: (enabled: boolean) => void;
+  useReranker: boolean;
+  setUseReranker: (enabled: boolean) => void;
   temperature: number;
+  useHybridSearch: boolean;
+  setUseHybridSearch: (enabled: boolean) => void;
+  splitterType: "recursive" | "sentence_transformer" | "semantic";
+  setSplitterType: (
+    s: "recursive" | "sentence_transformer" | "semantic"
+  ) => void;
   setTemperature: (temperature: number) => void;
   chunkSize: number;
   setChunkSize: (chunkSize: number) => void;
@@ -78,6 +86,12 @@ export const SideBar: FC<SideBarProps> = ({
   setUseOpenai,
   useEyewitnessMode,
   setEyewitnessMode,
+  useReranker,
+  setUseReranker,
+  useHybridSearch,
+  setUseHybridSearch,
+  splitterType,
+  setSplitterType,
   temperature,
   setTemperature,
   chunkSize,
@@ -97,9 +111,14 @@ export const SideBar: FC<SideBarProps> = ({
   const [chunkSizeInit, setChunkSizeInit] = useState<number>(1000);
   const [chunkOverlapInit, setChunkOverlapInit] = useState<number>(0);
   const [searchKwargsInit, setSearchKwargsNumInit] = useState<number>(3);
+  const [useRerankerInit, setUseRerankerInit] = useState<boolean>(useReranker);
+  const [useHybridSearchInit, setUseHybridSearchInit] =
+    useState<boolean>(useHybridSearch);
+  const [splitterTypeInit, setSplitterTypeInit] = useState(splitterType);
   const [selectedVoiceInit, setSelectedVoiceInit] = useState<string>("Male");
   const [openAi, setHasOpenai] = useState<boolean>(false);
-  const [eyewitnessModeInit, setEyewitnessModeInit] = useState<boolean>(useEyewitnessMode);
+  const [eyewitnessModeInit, setEyewitnessModeInit] =
+    useState<boolean>(useEyewitnessMode);
   const [selectedLanguageInit, setSelectedLanguageInit] =
     useState<string>("en");
   const toast = useToast();
@@ -182,7 +201,10 @@ export const SideBar: FC<SideBarProps> = ({
     setChunkOverlap(chunkOverlapInit);
     setSearchKwargsNum(searchKwargsInit);
     setSelectedVoiceInit(selectedVoice);
+    setUseHybridSearch(useHybridSearchInit);
+    setSplitterType(splitterTypeInit);
     setEyewitnessMode(eyewitnessModeInit);
+    setUseReranker(useRerankerInit);
     setSelectedLanguageInit(selectedLanguage);
   };
 
@@ -212,12 +234,14 @@ export const SideBar: FC<SideBarProps> = ({
     setSelected(selectedPerson);
     setChunkOverlapInit(chunkOverlap);
     setChunkSizeInit(chunkSize);
+    setUseHybridSearchInit(useHybridSearch);
+    setSplitterTypeInit(splitterType);
     setTemperatureInit(temperature);
+    setUseRerankerInit(useReranker);
     setSearchKwargsNumInit(searchKwargsNum);
     setUseOpenaiInit(useOpenai);
     setEyewitnessModeInit(useEyewitnessMode);
-};
- 
+  };
 
   return (
     <div className="flex w-1/6 flex-col h-screen bg-dark px-5 pt-5 gap-4">
@@ -311,19 +335,56 @@ export const SideBar: FC<SideBarProps> = ({
                 : "You need an OpenAI API key to use OpenAI, see README.md for more information."}
             </p>
           </FormControl>
+          {/* Hybrid Search */}
           <FormControl className="flex flex-row items-center bg-white p-2 rounded-md gap-5">
-                <Switch size = "sm" 
-                colorScheme = "green" 
-                isDisabled={
-                  loading ||
-                  globalDisabled !== 0 ||
-                  selected === "" ||
-                  !openAi
-                }
-                isChecked={useEyewitnessMode}
-                onChange={() => setEyewitnessMode(!useEyewitnessMode)}
-              />
-              <p className="text-black text-sm">Eyewitness Mode</p>
+            <Switch
+              size="sm"
+              colorScheme="green"
+              isChecked={useHybridSearch}
+              isDisabled={loading || globalDisabled !== 0 || selected === ""}
+              onChange={() => setUseHybridSearch(!useHybridSearch)}
+            />
+            <p className="text-black text-sm">Hybrid Search (BM25 + Dense)</p>
+          </FormControl>
+
+          {/* Chunking Strategy */}
+          <div className="bg-white rounded-md">
+            <Select
+              color={"black"}
+              size={"sm"}
+              rounded={"md"}
+              value={splitterType}
+              onChange={(e) => setSplitterType(e.target.value as any)}
+              isDisabled={loading || globalDisabled !== 0 || selected === ""}
+            >
+              <option value="recursive">Recursive</option>
+              <option value="sentence_transformer">Sentence Transformer</option>
+              <option value="semantic">Semantic</option>
+            </Select>
+          </div>
+
+          <FormControl className="flex flex-row items-center bg-white p-2 rounded-md gap-5">
+            <Switch
+              size="sm"
+              colorScheme="green"
+              isDisabled={
+                loading || globalDisabled !== 0 || selected === "" || !openAi
+              }
+              isChecked={useEyewitnessMode}
+              onChange={() => setEyewitnessMode(!useEyewitnessMode)}
+            />
+            <p className="text-black text-sm">Eyewitness Mode</p>
+          </FormControl>
+
+          <FormControl className="flex flex-row items-center bg-white p-2 rounded-md gap-5">
+            <Switch
+              size="sm"
+              colorScheme="green"
+              isChecked={useReranker}
+              isDisabled={loading || globalDisabled !== 0 || selected === ""}
+              onChange={() => setUseReranker(!useReranker)}
+            />
+            <p className="text-black text-sm">Reranking (Cross-Encoder)</p>
           </FormControl>
 
           <Box p={4} pt={0}>
@@ -504,6 +565,9 @@ export const SideBar: FC<SideBarProps> = ({
                 searchKwargsNum == searchKwargsInit &&
                 selectedVoice == selectedVoiceInit &&
                 selectedLanguage == selectedLanguageInit &&
+                useHybridSearch == useHybridSearchInit &&
+                splitterType == splitterTypeInit &&
+                useReranker == useRerankerInit &&
                 useEyewitnessMode == eyewitnessModeInit)
             }
             isLoading={loading}
@@ -529,6 +593,8 @@ export const SideBar: FC<SideBarProps> = ({
                 chunkSize == chunkSizeInit &&
                 chunkOverlap == chunkOverlapInit &&
                 useEyewitnessMode == eyewitnessModeInit &&
+                useHybridSearch == useHybridSearchInit &&
+                splitterType == splitterTypeInit &&
                 searchKwargsNum == searchKwargsInit &&
                 selectedVoice == selectedVoiceInit)
             }

@@ -3,6 +3,8 @@ import { ChatSection } from "@/components/molecules/ChatSection";
 import { CharacterSection } from "@/components/molecules/CharacterSection";
 import { SideBar } from "@/components/molecules/SideBar";
 import { useEffect, useState } from "react";
+import type { SplitterType } from "./utils/types"; // wenn TS
+
 import {
   checkIfPersonHasVoice,
   getAllPersons,
@@ -16,6 +18,9 @@ export default function Home() {
   const toast = useToast();
   const loading_id = "loading-toast";
   const [chat, setChat] = useState<Message[]>([]);
+  const [useHybridSearch, setUseHybridSearch] = useState(false);
+  const [useReranker, setUseReranker] = useState(false);
+  const [splitterType, setSplitterType] = useState<SplitterType>("semantic");
   const [modelUrl, setModelUrl] = useState<string>();
   const [backgroundUrl, setBackgroundUrl] = useState<string>(
     "textures/library.jpg"
@@ -182,7 +187,7 @@ export default function Home() {
   }, [selected]);
 
   return (
-    <main className="flex flex-1 h-screen flex-row items-center justify-between p-0">
+    <main className="flex h-screen flex-row items-stretch p-0">
       <SideBar
         selected={selected}
         setSelected={setSelected}
@@ -196,8 +201,14 @@ export default function Home() {
         setSelectedVoice={updateSelectedVoice}
         useOpenai={useOpenai}
         setUseOpenai={setUseOpenai}
+        useReranker={useReranker}
+        setUseReranker={setUseReranker}
         useEyewitnessMode={eyewitnessMode}
         setEyewitnessMode={setEyewitnessMode}
+        useHybridSearch={useHybridSearch}
+        setUseHybridSearch={setUseHybridSearch}
+        splitterType={splitterType}
+        setSplitterType={setSplitterType}
         temperature={temperature}
         setTemperature={setTemperature}
         chunkSize={chunkSize}
@@ -218,10 +229,13 @@ export default function Home() {
         relevantDocs={relevantDocs}
         setRelevantDocs={updateRelevantDocs}
         audioPlaying={audioPlaying}
+        useHybridSearch={useHybridSearch}
+        splitterType={splitterType}
         setAudioPlaying={setAudioPlaying}
         hasVoice={hasVoice}
         selectedVoice={selectedVoice}
         useOpenai={useOpenai}
+        useReranker={useReranker}
         eyewitnessMode={eyewitnessMode}
         temperature={temperature}
         chunkSize={chunkSize}

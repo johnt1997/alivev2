@@ -18,7 +18,7 @@ from packages.globals import (
     SEARCH_KWARGS_NUM,
     EMBEDDINGS,
 )
-# NEU: Importiere den SplitterType aus document_processing
+# NEU: Importiert den SplitterType aus document_processing
 from packages.document_processing import SplitterType
 import os # NEU: Für os.path.join
 import os

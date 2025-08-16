@@ -23,3 +23,5 @@ export interface Message {
   text: string;
   isHuman: boolean;
 }
+
+export type SplitterType = "recursive" | "sentence_transformer" | "semantic";

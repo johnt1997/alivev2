@@ -24,12 +24,10 @@ class DocumentProcessing:
     # NEU: Nimmt Embedding-Instanz entgegen (wird für Semantic Chunker gebraucht)
     def __init__(self, embeddings = EMBEDDINGS):
         # Wir nehmen an, dass EMBEDDINGS meist HuggingFaceEmbeddings sind für BGE.
-        # Füge ggf. Checks hinzu, falls OpenAIEmbeddings für Semantic Chunker nicht gehen.
         self.embeddings = embeddings
         print(f"[INFO] DocumentProcessing initialized with embeddings type: {type(self.embeddings)}")
 
     def _load_documents(self, directory_path: str) -> List[Document]:
-        # (Deine _load_documents Methode von oben, ggf. mit besserer Fehlerbehandlung)
         documents: List[Document] = []
         print(f"[INFO] Loading documents from: {directory_path}")
         if not os.path.isdir(directory_path):
@@ -124,7 +122,7 @@ class DocumentProcessing:
              print("[WARN] Falling back to recursive splitting.")
              return self._split_recursive(documents, CHUNK_SIZE, CHUNK_OVERLAP)
 
-        # Wähle einen Threshold-Typ: "percentile", "standard_deviation", "interquartile"
+        #  "percentile", "standard_deviation", "interquartile"
         threshold_type = "percentile" # Standard ist oft gut
         
         print(f"[INFO] Splitting with SemanticChunker (embeddings: {type(self.embeddings).__name__}, threshold: {threshold_type})")

@@ -1,5 +1,6 @@
 // src/services/api.js
 const BASE_URL = "http://127.0.0.1:8080";
+import type { SplitterType } from "./types";
 
 export async function getAudioResponse(
   person: string,
@@ -97,11 +98,14 @@ export async function ask_question(
   language: string = "en",
   previous_question: string = "",
   previous_answer: string = "",
-  eyewitness_mode: string = "False"  
+  eyewitness_mode: string = "False",
+  use_reranker = "False",
+  retrieval_mode: "dense" | "hybrid" = "dense",
+  splitter_type: SplitterType = "semantic"
 ) {
   try {
     const response = await fetch(
-      `${BASE_URL}/ask-question?question=${question}&person=${person}&voice=${voice}&chunk_size=${chunk_size}&chunk_overlap=${chunk_overlap}&temperature=${temperature}&search_kwargs_num=${search_kwargs_num}&use_openai=${use_openai}&language=${language}&previous_question=${previous_question}&previous_answer=${previous_answer}&eyewitness_mode=${eyewitness_mode}`
+      `${BASE_URL}/ask-question?question=${question}&person=${person}&voice=${voice}&chunk_size=${chunk_size}&chunk_overlap=${chunk_overlap}&temperature=${temperature}&search_kwargs_num=${search_kwargs_num}&use_openai=${use_openai}&language=${language}&previous_question=${previous_question}&previous_answer=${previous_answer}&eyewitness_mode=${eyewitness_mode}&retrieval_mode=${retrieval_mode}&splitter_type=${splitter_type}&use_reranker=${use_reranker}`
     );
     return response;
   } catch (error) {

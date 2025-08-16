@@ -35,6 +35,9 @@ interface ChatSectionProps {
   selectedVoice: string;
   useOpenai: boolean;
   eyewitnessMode: boolean;
+  useReranker: boolean;
+  useHybridSearch: boolean;
+  splitterType: "recursive" | "sentence_transformer" | "semantic";
   temperature: number;
   chunkSize: number;
   chunkOverlap: number;
@@ -55,6 +58,9 @@ export const ChatSection: FC<ChatSectionProps> = ({
   hasVoice,
   selectedVoice,
   eyewitnessMode,
+  useReranker,
+  useHybridSearch,
+  splitterType,
   useOpenai,
   temperature,
   chunkSize,
@@ -97,7 +103,10 @@ export const ChatSection: FC<ChatSectionProps> = ({
       selectedLanguage,
       previousQuestion,
       previousAnswer,
-      eyewitnessMode ? "True" : "False"
+      eyewitnessMode ? "True" : "False",
+      useReranker ? "True" : "False",
+      useHybridSearch ? "hybrid" : "dense",
+      splitterType
     );
     if (response && response.ok) {
       const data: AnswerWithDocuments = await response.json();
@@ -129,10 +138,10 @@ export const ChatSection: FC<ChatSectionProps> = ({
   }, [chat]);
 
   return (
-    <div className="flex flex-col flex-1 h-screen justify-between bg-theme p-5">
+    <div className="flex flex-col flex-1 min-w-0 h-screen min-h-0 overflow-hidden bg-theme p-5">
       {/** Chat Messages */}
       <div
-        className=" flex flex-1 overflow-y-scroll max-h-screen flex-col"
+        className=" flex flex-1 overflow-y-auto flex-col pb-40"
         style={{
           scrollbarWidth: "none",
         }}
@@ -159,7 +168,7 @@ export const ChatSection: FC<ChatSectionProps> = ({
         transformationSteps={transformationSteps}
         answer={chat[chat.length - 1]?.text}
       />
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col">
         <HStack spacing={2} mb={2}>
           <Button
             leftIcon={<FaFileExport />}

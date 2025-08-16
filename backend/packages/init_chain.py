@@ -1,7 +1,7 @@
 import torch
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from typing import List, Tuple, Dict # Dict hinzugefügt für Typsicherheit
-
+from datetime import datetime
 import os
 from langchain.llms.llamacpp import LlamaCpp
 from langchain.schema.vectorstore import VectorStoreRetriever
@@ -38,20 +38,23 @@ class InitializeQuesionAnsweringChain:
         search_kwargs_num = 3,
         language: str = "en",
         #factuality_threshold: float = 0.4,
-        use_reranker: bool = True
+        use_reranker: bool = True,
+        eyewitness_mode: bool= True
+        
     ):
         self.llm = llm
         self.chain_type = chain_type
         self.retriever = retriever
         self.db = db
+        self.eyewitness_mode = eyewitness_mode
         self.use_reranker = use_reranker
         self.cross_encoder = None
         self.search_kwargs_num = search_kwargs_num
         self.language = language
-        #self.factuality_threshold = factuality_threshold # <-- gehört das jetzt noch hier hin nach all den Änderungen??
+        #self.factuality_threshold = factuality_threshold
         self.verifier = FactualVerifier()
         self.person = person
-        #self.memory = self._init_memory()##kommt weg?
+        #self.memory = self._init_memory()
         if use_reranker:
             self._init_reranker()
     
@@ -60,10 +63,10 @@ class InitializeQuesionAnsweringChain:
         """Initializes the CrossEncoder model for re-ranking."""
         # Modell Wahl: ms-marco-MiniLM-L-6-v2 ist gut für Englisch. Für Deutsch ggf. anderes Modell nötig!
         model_name = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-        # Prüfe ob GPU verfügbar ist (CUDA oder Metal) und setze Device entsprechend
-        # Hinweis: Auf deinem M2 Mac sollte Metal automatisch erkannt werden, wenn llama-cpp-python korrekt installiert ist.
+        # PrüfeGPU verfügbar ist (CUDA oder Metal) und setzt Device entsprechend
+        # Hinweis: Auf M2 Mac sollte Metal automatisch erkannt werden, wenn llama-cpp-python korrekt installiert ist.
         # Auf Windows mit Iris Xe wird es wahrscheinlich 'cpu' sein.
-        # Eine robustere Prüfung wäre hier sinnvoll, aber für den Start:
+        # Eine robustere Prüfung wäre hier sinnvoll, aber für den Start reichts:
         try:
              if torch.cuda.is_available():
                   device = 'cuda'
@@ -91,7 +94,7 @@ class InitializeQuesionAnsweringChain:
             self.cross_encoder = None # Auf None setzen, damit wir später prüfen können
 
     
-    def _init_memory(self):####wird nicht mehr aufgerufen?
+    def _init_memory(self):####
         """Initializes the memory for the conversational chain. Allows to ask follow up questions during conversation."""
         memory = ConversationBufferMemory(memory_key="chat_history")
         return memory
@@ -198,26 +201,48 @@ class InitializeQuesionAnsweringChain:
             factual_answer = "I don't have enough information to answer this question."
 
         final_answer = factual_answer # Default to the factual answer
+
+
         if self.person.personality is not None:
-             print("[INFO] Impersonating answer with personality...")
-             personality_prompt = IMPERSONATION_PROMPT_WITH_PERSONALITY
-             final_answer = self.llm.invoke(
-            personality_prompt.format(
+            print("[INFO] Impersonating answer with personality...")
+            personality_prompt = IMPERSONATION_PROMPT_WITH_PERSONALITY
+             #final_answer = self.llm.invoke(
+            #personality_prompt.format(
+                #person=self.person.name,
+                #answer=factual_answer,
+                #personality=self.person.format_personality_prompt(),
+            #)
+            prompt_text = personality_prompt.format(
                 person=self.person.name,
                 answer=factual_answer,
                 personality=self.person.format_personality_prompt(),
-            )
         )
         else:
             # Use the simple impersonation prompt
             print("[INFO] Impersonating answer without personality...")
             impersonation_prompt = IMPERSONATION_PROMPT
-            final_answer = self.llm.invoke(
-                impersonation_prompt.format(person=self.person.name, answer=factual_answer)
+            #final_answer = self.llm.invoke(
+                #mpersonation_prompt.format(person=self.person.name, answer=factual_answer)
+            #)
+            prompt_text = impersonation_prompt.format(
+                person=self.person.name,
+                answer=factual_answer
+            
             )
+        if self.eyewitness_mode:
+            eyewitness_suffix = (
+                "\n\n[Eyewitness] Ergänze am Ende 1–2 sehr kurze Sätze aus heutiger "
+                "Zeitzeug*innen-Perspektive. Keine neuen Fakten. Kennzeichne mit 'Eyewitness:'."
+            if self.language == "de" else
+                "\n\n[Eyewitness] Append 1–2 very short sentences from a present-day "
+                "eyewitness perspective at the end that directly address the question from today's perspective. Do not add new facts. Prefix with 'Eyewitness:'."
+            )
+        
+            prompt_text += eyewitness_suffix
+
+        final_answer = self.llm.invoke(prompt_text)
         print(f"[INFO] Factual Answer: {factual_answer}")
         print(f"[INFO] Final Impersonated Answer: {final_answer}")
-
         
         # 6) Factuality Score berechnen
         factuality_score = self.verifier.score(context, factual_answer) if context else 0.0
@@ -234,7 +259,7 @@ class InitializeQuesionAnsweringChain:
         
         print(f"[INFO] QA completed. Factuality: {factuality_score:.3f}, Used reranker: {used_reranker}")
         
-        # WICHTIG: Gib die rerankten Dokumente zurück (nicht die initialen!)
+        # WICHTIG: Gibt die rerankten Dokumente zurück (nicht die initialen!)
         return final_answer, reranked_docs_with_scores, metadata
     
     # In init_chain.py - _rerank_documents() Methode ersetzen
@@ -286,12 +311,12 @@ class InitializeQuesionAnsweringChain:
             sorted_docs = sorted(docs_with_scores, key=lambda x: x[1], reverse=True)
             return sorted_docs[:top_n]  # ÄNDERUNG: Tupel beibehalten
 
-        # Kombiniere die ursprünglichen Dokumente mit den neuen Scores und sortiere
+        # Kombiniert die ursprünglichen Dokumente mit den neuen Scores und sortiere
         original_docs = [doc for doc, score in docs_with_scores]
         docs_with_new_scores = list(zip(original_docs, scores))
         reranked_docs_with_scores = sorted(docs_with_new_scores, key=lambda x: x[1], reverse=True)
 
-        # ÄNDERUNG: Gebe die Top N Tupel zurück (nicht nur Dokumente)
+        # ÄNDERUNG: Gibt die Top N Tupel zurück (nicht nur Dokumente)
         print(f"[INFO] Re-ranking complete. Returning top {top_n} documents.")
         # Debugging: Zeige die Scores der Top-Dokumente
         for i, (doc, score) in enumerate(reranked_docs_with_scores[:top_n]):
