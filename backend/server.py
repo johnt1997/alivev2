@@ -30,6 +30,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])
 
+# Cache für geladene Chains – verhindert Neu-Laden bei jedem Request
+_chain_cache: Dict = {}
+
 
 
 MIN_SENT_CHUNK = 200  # wie im Frontend, nur für sentence_transformer
@@ -106,7 +109,26 @@ def _get_qa_chain_and_person(params: Dict):
     """
     Kapselt die gesamte Logik zum Laden oder Erstellen der Indizes
     und zur Initialisierung der QA-Chain.
+    Ergebnisse werden gecacht – bei identischer Konfiguration wird die
+    Chain nicht neu gebaut.
     """
+    cache_key = (
+        params["person_name"],
+        params["splitter_type"],
+        params["chunk_size"],
+        params["chunk_overlap"],
+        params["retrieval_mode"],
+        params["use_reranker"],
+        params["use_openai"],
+        params["search_kwargs_num"],
+        params["temperature"],
+        params["language"],
+        params["eyewitness_mode"],
+    )
+    if cache_key in _chain_cache:
+        print(f"[CACHE] Returning cached chain for key: {cache_key}")
+        return _chain_cache[cache_key]
+
     person = Person(name=params["person_name"], voice=params["voice"])
     embeddings_instance = _get_embedding_instance(params["use_openai"])
     
@@ -170,6 +192,7 @@ def _get_qa_chain_and_person(params: Dict):
         eyewitness_mode=params["eyewitness_mode"]
     )
     
+    _chain_cache[cache_key] = (qa_chain, person)
     return qa_chain, person
 
 @app.route("/upload-person-data", methods=["POST"])
@@ -498,9 +521,10 @@ def ask_question():
         "retrieval_mode": request.args.get("retrieval_mode", default="hybrid", type=str),
         "use_reranker": string_to_bool(request.args.get("use_reranker", default="False", type=str)),
         "splitter_type": request.args.get("splitter_type", default="recursive", type=str),
-        "eyewitness_mode": string_to_bool(request.args.get("eyewitness_mode", default="True", type=str))
+        "eyewitness_mode": string_to_bool(request.args.get("eyewitness_mode", default="True", type=str)),
+        "previous_question": request.args.get("previous_question", default="", type=str),
+        "previous_answer": request.args.get("previous_answer", default="", type=str),
     }
-    print("xxxxxxx")
     print(params["use_reranker"])
     if not params["person_name"] or not params["question"]:
         abort(400, "Person and question must be specified.")
@@ -522,7 +546,11 @@ def ask_question():
     qa_chain, _ = _get_qa_chain_and_person(params)
 
     # Korrekte `answer`-Methode aufrufen
-    answer, final_docs, metadata = qa_chain.answer(query=params["question"])
+    answer, final_docs, metadata = qa_chain.answer(
+        query=params["question"],
+        previous_question=params["previous_question"],
+        previous_answer=params["previous_answer"],
+    )
 
     # Antwort aufbereiten und zurückgeben
     response_data = {

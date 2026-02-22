@@ -68,19 +68,14 @@ class InitializeQuesionAnsweringChain:
         # Auf Windows mit Iris Xe wird es wahrscheinlich 'cpu' sein.
         # Eine robustere Prüfung wäre hier sinnvoll, aber für den Start reichts:
         try:
-             if torch.cuda.is_available():
-                  device = 'cuda'
-             elif torch.backends.mps.is_available(): # Für Metal auf Mac M1/M2/M3
-                  device = 'mps'
-             else:
+            if torch.cuda.is_available():
+                device = 'cuda'
+            elif torch.backends.mps.is_available():  # Mac Silicon
+                device = 'mps'
+            else:
                 device = 'cpu'
-        except AttributeError: # Falls mps nicht verfügbar ist in der torch version
-             if torch.cuda.is_available():
-                  device = 'cuda'
-             else:
-                  device = 'mps'
-        
-        device = 'mps'
+        except AttributeError:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
         model_kwargs = {'device': device}
         print(f"[INFO] Initializing CrossEncoder '{model_name}' on device: {device}")
         print(f"[RERANK] model={model_name} device={device} "
@@ -130,14 +125,32 @@ class InitializeQuesionAnsweringChain:
         print(f"[INFO] Transformed query: '{transformed_query}'")
         return transformed_query
 
-    def answer(self, query: str) -> tuple[str, list[tuple], dict]:
+    def answer(
+        self,
+        query: str,
+        previous_question: str = "",
+        previous_answer: str = "",
+    ) -> tuple[str, list[tuple], dict]:
         """
         Hauptmethode für Question Answering mit korrekter Evaluation.
         Gibt rerankte Dokumente zurück für konsistente RAGAS-Metriken.
+        Unterstützt optionale Chat-Historie via previous_question/previous_answer.
         """
         top_n = self.search_kwargs_num
         k_init = max(10, top_n)  # Mehr initiale Kandidaten für sinnvolles Reranking
-        
+
+        # Chat-Historie: Follow-up-Frage zu Standalone-Frage umformulieren
+        if previous_question and previous_answer:
+            print(f"[INFO] Condensing follow-up question with chat history...")
+            chat_history = f"Human: {previous_question}\nAI: {previous_answer}"
+            query = self.llm.invoke(
+                CONDENSE_QUESTION_PROMPT.format(
+                    chat_history=chat_history,
+                    question=query,
+                )
+            )
+            print(f"[INFO] Condensed standalone question: '{query}'")
+
         print(f"[INFO] Starting QA with k_init={k_init}, top_n={top_n}, reranker={self.use_reranker}")
         retrieval_query = self._transform_question(query)
         
