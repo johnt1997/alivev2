@@ -169,32 +169,80 @@ npm run start
 # frontend running on localhost:3000
 ```
 
+# RAG Pipeline Evaluation
+
+The repository includes a complete evaluation framework for comparing different RAG pipeline configurations.
+
+### Running Evaluations
+
+```bash
+cd backend
+
+# Run all 12 pipeline combinations (3 chunkers × 4 retrieval modes)
+python run_evaluation.py --corpus Washington
+
+# Run specific pipelines only
+python run_evaluation.py --corpus Washington --pipelines dense_semantic hybrid_semantic_rerank
+
+# LLM comparison (e.g., GPT-3.5 instead of Mistral)
+python run_evaluation.py --corpus Washington --pipelines dense_semantic --llm gpt35 --output-dir llm_comparison
+
+# Chunk-size experiment
+python run_evaluation.py --corpus Washington --pipelines dense_recursive --chunk-sizes 500 1000 1500 --output-dir chunk_size_experiment
+
+# Quick test with only 3 questions
+python run_evaluation.py --corpus Washington --limit 3
+```
+
+### Pipeline Configurations
+
+| Chunker | Retrieval Modes |
+|---------|-----------------|
+| `recursive` | dense, dense+rerank, hybrid, hybrid+rerank |
+| `sentence_transformer` | dense, dense+rerank, hybrid, hybrid+rerank |
+| `semantic` | dense, dense+rerank, hybrid, hybrid+rerank |
+
+### Evaluation Metrics (RAGAS)
+
+- **Faithfulness**: Is the answer grounded in the retrieved context?
+- **Answer Relevancy**: Does the answer address the question?
+- **Context Precision**: Are the retrieved chunks relevant?
+- **Context Recall**: Are all necessary facts retrieved?
+- **Answer Correctness**: Does the answer match the ground truth?
+- **Semantic Similarity**: Embedding similarity to ground truth
+
+### Analysis
+
+After running evaluations, use `mega_analysis_notebook.ipynb` to generate:
+- Aggregate statistics per pipeline
+- Statistical significance tests (Wilcoxon signed-rank)
+- Visualizations and comparison charts
+
 # Complete Project Structure
 
 ```bash
 History-Chat-Bot
 ├── backend
-│   ├── data
-│   ├── database
-│   ├── models # Download and set Models as described above
-│   │   ├── bge-small-en-v1.5 # Embedding model
-│   │   ├── mistral-7b-instruct-v0.1.Q4_K_M.gguf # LLM
-│   │   └── tts_models--multilingual--multi-dataset--xtts_v2 # TTS Model
-│   ├── packages
-│   ├── persons
-│   ├── prompts
-│   ├── tts-outputs
-│   ├── virtual_characters
-│   ├── voices
-│   ├── .env # (optional) Set OpenAI API Key here as described above
-│   ├── Dockerfile
-│   ├── helper_functions.py
-│   ├── requirements.txt
-│   └── server.py
+│   ├── data                    # PDF documents per person
+│   ├── database                # ChromaDB vector stores (auto-generated)
+│   ├── models                  # Download and set Models as described above
+│   │   ├── bge-small-en-v1.5
+│   │   ├── mistral-7b-instruct-v0.1.Q4_K_M.gguf
+│   │   └── tts_models--multilingual--multi-dataset--xtts_v2
+│   ├── packages                # Core RAG pipeline code
+│   ├── persons                 # Person configurations
+│   ├── prompts                 # LLM prompt templates
+│   ├── autogen_questions       # Evaluation question sets
+│   ├── results                 # Evaluation results (CSV)
+│   ├── bm25_jsonl              # BM25 indices for hybrid search
+│   ├── .env
+│   ├── server.py               # Backend API server
+│   ├── run_evaluation.py       # Evaluation script
+│   ├── mega_analysis_notebook.ipynb  # Analysis notebook
+│   └── requirements.txt
 │
 ├── frontend
 │   └── history-chat-bot
-│       └── # Frontend Code
 │
 ├── compose.yaml
 ├── README.md
