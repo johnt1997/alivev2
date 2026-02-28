@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+j#!/usr/bin/env python3
 """
 Vollständiges Evaluations-Script für alle RAG-Pipelines.
 
@@ -25,6 +25,8 @@ import os
 import sys
 import argparse
 import gc
+import json
+import subprocess
 import pandas as pd
 from tqdm import tqdm
 
@@ -58,6 +60,85 @@ from packages.vector_store_handler import VectorStoreHandler, HybridRetriever
 from packages.document_processing import DocumentProcessing
 from packages.bm25_retriever import BM25Retriever
 from packages.init_chain import InitializeQuesionAnsweringChain
+
+
+# =============================================================================
+# BM25 INDEX ERSTELLUNG
+# =============================================================================
+
+def build_bm25_index(corpus_name: str, splitter_type: str, chunk_size: int, chunk_overlap: int):
+    """
+    Erstellt BM25-Index für Hybrid-Retrieval.
+
+    1. Chunked Dokumente -> JSONL
+    2. JSONL -> Lucene Index (via pyserini)
+    """
+    jsonl_dir = f"./bm25_jsonl/{corpus_name}_{splitter_type}"
+    index_dir = f"./bm25_indexes/{corpus_name}_{splitter_type}"
+
+    # Schritt 1: JSONL erstellen
+    print(f"[BM25] Creating JSONL for {splitter_type}...")
+    os.makedirs(jsonl_dir, exist_ok=True)
+
+    dp = DocumentProcessing(embeddings=EMBEDDINGS)
+    chunks = dp.get_chunked_documents(
+        directory_path=f"./data/{corpus_name}",
+        splitter_type=splitter_type,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
+
+    jsonl_path = os.path.join(jsonl_dir, "docs.jsonl")
+    with open(jsonl_path, "w", encoding="utf-8") as f:
+        for chunk in chunks:
+            record = {
+                "id": chunk.metadata.get("source", "unknown"),
+                "contents": chunk.page_content
+            }
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    print(f"[BM25] Wrote {len(chunks)} chunks to {jsonl_path}")
+
+    # Schritt 2: Lucene Index bauen
+    print(f"[BM25] Building Lucene index...")
+    os.makedirs(index_dir, exist_ok=True)
+
+    cmd = [
+        sys.executable, "-m", "pyserini.index.lucene",
+        "--collection", "JsonCollection",
+        "--input", jsonl_dir,
+        "--index", index_dir,
+        "--generator", "DefaultLuceneDocumentGenerator",
+        "--threads", "4",
+        "--storePositions", "--storeDocvectors", "--storeRaw"
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"[BM25] STDERR: {result.stderr}")
+        raise RuntimeError(f"Failed to build BM25 index: {result.stderr}")
+
+    # Validieren
+    from pyserini.search.lucene import LuceneSearcher
+    searcher = LuceneSearcher(index_dir)
+    print(f"[BM25] Index ready: {index_dir} | num_docs={searcher.num_docs}")
+
+    return index_dir
+
+
+def ensure_bm25_index(corpus_name: str, splitter_type: str, chunk_size: int, chunk_overlap: int) -> str:
+    """
+    Stellt sicher dass BM25-Index existiert, erstellt ihn falls nötig.
+    Gibt den Index-Pfad zurück.
+    """
+    index_dir = f"./bm25_indexes/{corpus_name}_{splitter_type}"
+
+    if os.path.isdir(index_dir) and os.listdir(index_dir):
+        print(f"[BM25] Using existing index: {index_dir}")
+        return index_dir
+
+    print(f"[BM25] Index not found, building: {index_dir}")
+    return build_bm25_index(corpus_name, splitter_type, chunk_size, chunk_overlap)
 
 
 # =============================================================================
@@ -250,9 +331,13 @@ def run_single_pipeline(
     # Retriever erstellen
     if retrieval_mode == 'hybrid':
         print("[INFO] Using HYBRID retriever")
-        bm25_index_dir = f"./bm25_indexes/{corpus_name}_{splitter_type}"
-        if not os.path.isdir(bm25_index_dir):
-            raise RuntimeError(f"BM25 index not found: {bm25_index_dir}")
+        # BM25-Index automatisch erstellen falls nicht vorhanden
+        bm25_index_dir = ensure_bm25_index(
+            corpus_name=corpus_name,
+            splitter_type=splitter_type,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap
+        )
         bm25_retriever = BM25Retriever(bm25_index_dir)
         retriever = HybridRetriever(db=db, bm25_retriever=bm25_retriever, k=search_kwargs_num)
     else:
