@@ -76,6 +76,16 @@ docker build --tag <docker-name-2> .
 docker run --rm -p 3000:3000 -it <docker-name-2>
 ```
 
+# Performance Notice
+
+> **Warning: Response times depend heavily on your hardware.**
+>
+> - **First request after startup:** The system builds a vector database from your documents and loads the LLM into memory. This can take **10–25 minutes** depending on document size, chosen chunking strategy, and hardware.
+> - **Subsequent requests:** Vector database is cached; only LLM inference runs. Still expect **5–15 minutes per response** on CPU-only machines.
+> - **Semantic chunking** (default) is the slowest strategy but produces the best retrieval quality. Switch to *Recursive* in the sidebar for faster initial loading.
+> - **GPU acceleration** is only supported for NVIDIA (CUDA) and Apple Silicon (Metal). Intel integrated graphics do **not** accelerate inference.
+> - **Recommended for faster responses:** Enable the *Use OpenAI* toggle in the sidebar and provide an `OPENAI_API_KEY` in `backend/.env`. This offloads LLM inference to the cloud and reduces response time to a few seconds.
+
 # Usage
 
 Read the remarks on usage before using the tool.

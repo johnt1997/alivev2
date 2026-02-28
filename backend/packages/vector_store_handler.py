@@ -78,7 +78,7 @@ class VectorStoreHandler:
         #return os.path.join(base_path, folder_name, config_name)
         if splitter_type == "semantic":  # Überschreibt Parameter für semantic
             chunk_size, chunk_overlap = 0, 0
-        return os.path.join(base_path, f"{splitter_type}_{chunk_size}_{chunk_overlap}")
+        return os.path.join(base_path, vector_store_name, f"{splitter_type}_{chunk_size}_{chunk_overlap}")
 
     def _create_vector_store(
         self,
@@ -132,16 +132,21 @@ class VectorStoreHandler:
              return None
              
         try:
-            # allow_dangerous_deserialization ist wichtig!
-            db = FAISS.load_local(
-                folder_path=db_path,
-                embeddings=self.embeddings,
-                allow_dangerous_deserialization=True
-            )
+            try:
+                db = FAISS.load_local(
+                    folder_path=db_path,
+                    embeddings=self.embeddings,
+                    allow_dangerous_deserialization=True
+                )
+            except TypeError:
+                # Older LangChain version without allow_dangerous_deserialization
+                db = FAISS.load_local(
+                    folder_path=db_path,
+                    embeddings=self.embeddings,
+                )
             print(f"[INFO] Successfully loaded vector store from {db_path}")
             return db
         except Exception as e:
-            # Spezifischere Fehlermeldung, wenn Laden fehlschlägt
             print(f"[ERROR] Failed to load vector store from {db_path}: {e}")
             return None
 

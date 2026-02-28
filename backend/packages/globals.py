@@ -7,8 +7,8 @@ VECTOR_STORE_PATH = "./database/"
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"  # wird beim ersten Start automatisch von HuggingFace geladen
 EMBEDDINGS = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
 MODEL_PATH = "./models/"
-MODEL_NAME = "Phi-3-mini-4k-instruct-q4.gguf"
-#MODEL_NAME = "mistral-7b-instruct-v0.1.Q4_K_M.gguf"
+#MODEL_NAME = "Phi-3-mini-4k-instruct-q4.gguf"
+MODEL_NAME = "mistral-7b-instruct-v0.1.Q4_K_M.gguf"
 TEMPERATURE = 0.1
 N_CTX = 3900
 F16_KV = True

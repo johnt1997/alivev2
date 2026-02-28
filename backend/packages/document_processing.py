@@ -160,7 +160,9 @@ class DocumentProcessing:
         print(f"[INFO] Chunking documents using strategy: {splitter_type}")
         if splitter_type == "recursive":
             # Nutzt chunk_size & chunk_overlap wie übergeben (Zeichen)
-            split_documents = self._split_recursive(documents, chunk_size, chunk_overlap)
+            # NOTE: _split_recursive_down = standard RecursiveCharacterTextSplitter
+            #        _split_recursive = sliding window (deprecated, produced too many fragments)
+            split_documents = self._split_recursive_down(documents, chunk_size, chunk_overlap)
         elif splitter_type == "sentence_transformer":
             # Nutzt chunk_size & chunk_overlap wie übergeben, aber interpretiert sie als TOKENS!
             # Ggf. müssen die Werte angepasst werden, wenn diese Methode aufgerufen wird.

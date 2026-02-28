@@ -101,11 +101,12 @@ export async function ask_question(
   eyewitness_mode: string = "False",
   use_reranker = "False",
   retrieval_mode: "dense" | "hybrid" = "dense",
-  splitter_type: SplitterType = "semantic"
+  splitter_type: SplitterType = "semantic",
+  llm_model: string = "Phi-3-mini-4k-instruct-q4.gguf"
 ) {
   try {
     const response = await fetch(
-      `${BASE_URL}/ask-question?question=${question}&person=${person}&voice=${voice}&chunk_size=${chunk_size}&chunk_overlap=${chunk_overlap}&temperature=${temperature}&search_kwargs_num=${search_kwargs_num}&use_openai=${use_openai}&language=${language}&previous_question=${previous_question}&previous_answer=${previous_answer}&eyewitness_mode=${eyewitness_mode}&retrieval_mode=${retrieval_mode}&splitter_type=${splitter_type}&use_reranker=${use_reranker}`
+      `${BASE_URL}/ask-question?question=${question}&person=${person}&voice=${voice}&chunk_size=${chunk_size}&chunk_overlap=${chunk_overlap}&temperature=${temperature}&search_kwargs_num=${search_kwargs_num}&use_openai=${use_openai}&language=${language}&previous_question=${previous_question}&previous_answer=${previous_answer}&eyewitness_mode=${eyewitness_mode}&retrieval_mode=${retrieval_mode}&splitter_type=${splitter_type}&use_reranker=${use_reranker}&llm_model=${llm_model}`
     );
     return response;
   } catch (error) {

@@ -5,6 +5,7 @@ from packages.globals import (
     CHUNK_OVERLAP,
     SEARCH_KWARGS_NUM,
     TEMPERATURE,
+    MODEL_NAME,
 )
 
 import os
@@ -50,11 +51,11 @@ def normalize_chunk_params(splitter: str, chunk_size: int, chunk_overlap: int) -
             print(f"[INFO] normalize (semantic): forcing chunk_size=0, overlap=0 (auto mode)")
         return 0, 0
 
-    # sentence_transformer: still ÷3 + Mindestgröße
+    # sentence_transformer: Frontend hat bereits ÷3 gemacht → nur Mindestgröße prüfen
     if splitter == "sentence_transformer":
-        eff = max(MIN_SENT_CHUNK, chunk_size // 3)
+        eff = max(MIN_SENT_CHUNK, chunk_size)
         if eff != chunk_size:
-            print(f"[INFO] normalize (sentence_transformer): {chunk_size} -> {eff}")
+            print(f"[INFO] normalize (sentence_transformer): {chunk_size} -> {eff} (MIN enforced)")
         chunk_size = eff
 
     # Overlap-Guard
@@ -124,6 +125,7 @@ def _get_qa_chain_and_person(params: Dict):
         params["temperature"],
         params["language"],
         params["eyewitness_mode"],
+        params["llm_model"],
     )
     if cache_key in _chain_cache:
         print(f"[CACHE] Returning cached chain for key: {cache_key}")
@@ -178,7 +180,7 @@ def _get_qa_chain_and_person(params: Dict):
         retriever = db.as_retriever(search_kwargs={"k": params["search_kwargs_num"]})
     
     # Initialisiere die QA-Chain.
-    llm_config = LLMConfig(temperature=params["temperature"])
+    llm_config = LLMConfig(temperature=params["temperature"], model_name=params["llm_model"])
     llm = llm_config.get_local_llm(use_openai=params["use_openai"])
     
     qa_chain = InitializeQuesionAnsweringChain(
@@ -518,12 +520,13 @@ def ask_question():
         "search_kwargs_num": request.args.get("search_kwargs_num", default=SEARCH_KWARGS_NUM, type=int),
         "use_openai": string_to_bool(request.args.get("use_openai", default="False", type=str)),
         "language": request.args.get("language", default="en", type=str),
-        "retrieval_mode": request.args.get("retrieval_mode", default="hybrid", type=str),
+        "retrieval_mode": request.args.get("retrieval_mode", default="dense", type=str),
         "use_reranker": string_to_bool(request.args.get("use_reranker", default="False", type=str)),
         "splitter_type": request.args.get("splitter_type", default="recursive", type=str),
         "eyewitness_mode": string_to_bool(request.args.get("eyewitness_mode", default="True", type=str)),
         "previous_question": request.args.get("previous_question", default="", type=str),
         "previous_answer": request.args.get("previous_answer", default="", type=str),
+        "llm_model": request.args.get("llm_model", default=MODEL_NAME, type=str),
     }
     print(params["use_reranker"])
     if not params["person_name"] or not params["question"]:

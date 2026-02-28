@@ -43,6 +43,7 @@ interface ChatSectionProps {
   chunkOverlap: number;
   searchKwargsNum: number;
   selectedLanguage: string;
+  llmModel: string;
 }
 
 export const ChatSection: FC<ChatSectionProps> = ({
@@ -67,6 +68,7 @@ export const ChatSection: FC<ChatSectionProps> = ({
   chunkOverlap,
   searchKwargsNum,
   selectedLanguage,
+  llmModel,
 }) => {
   const exportChat = (format: "markdown" | "pdf") => {
     if (format === "markdown") exportChatAsMarkdown(chat);
@@ -106,7 +108,8 @@ export const ChatSection: FC<ChatSectionProps> = ({
       eyewitnessMode ? "True" : "False",
       useReranker ? "True" : "False",
       useHybridSearch ? "hybrid" : "dense",
-      splitterType
+      splitterType,
+      llmModel
     );
     if (response && response.ok) {
       const data: AnswerWithDocuments = await response.json();

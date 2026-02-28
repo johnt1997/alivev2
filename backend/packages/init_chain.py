@@ -1,5 +1,47 @@
-import torch
-from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+try:
+    import torch
+except (ImportError, OSError):
+    torch = None
+import re
+
+
+def _clean_single_line_output(text: str) -> str:
+    """For query/question transformations - extract just the first clean sentence."""
+    if not text:
+        return text
+    for prefix in ("Standalone question:", "Reformulated Question:", "Reformulated Answer:"):
+        s = text.lstrip()
+        if s.lower().startswith(prefix.lower()):
+            text = s[len(prefix):].lstrip()
+    text = re.split(r'\n|\(Note', text)[0]
+    return text.strip().rstrip('`').strip()
+
+
+def _clean_answer_output(text: str) -> str:
+    """For full answers - strip verbose Phi-3 continuations."""
+    if not text:
+        return text
+    for pattern in (
+        r'\[/INST\]',           # leaked prompt token
+        r'\nI don\'t know\.',   # repeated fallback phrase
+        r'\nReformulated Answer:', r'\nreformulated answer:',
+        r'\nSolution:', r'\nAnswer=', r'\nanswer=',
+        r'\nNote:', r'\n\(Note', r'\n```',
+    ):
+        m = re.search(pattern, text)
+        if m:
+            text = text[:m.start()]
+    return text.strip()
+
+
+class HuggingFaceCrossEncoder:
+    """Compatibility wrapper: replaces langchain_community.cross_encoders (not in v0.0.25)."""
+    def __init__(self, model_name: str, model_kwargs: dict = None):
+        device = (model_kwargs or {}).get('device', 'cpu')
+        self._encoder = CrossEncoder(model_name, device=device)
+    def score(self, sentence_pairs):
+        import numpy as np
+        return np.array(self._encoder.predict(sentence_pairs))
 from typing import List, Tuple, Dict # Dict hinzugefügt für Typsicherheit
 from datetime import datetime
 import os
@@ -8,7 +50,7 @@ from langchain.schema.vectorstore import VectorStoreRetriever
 from typing import List, Tuple
 from langchain.schema.document import Document
 from packages.factual_verifier import FactualVerifier
-import torch, numpy as np
+import numpy as np
 from sentence_transformers import CrossEncoder, __version__ as st_ver
 from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores.faiss import FAISS
@@ -68,14 +110,14 @@ class InitializeQuesionAnsweringChain:
         # Auf Windows mit Iris Xe wird es wahrscheinlich 'cpu' sein.
         # Eine robustere Prüfung wäre hier sinnvoll, aber für den Start reichts:
         try:
-            if torch.cuda.is_available():
+            if torch and torch.cuda.is_available():
                 device = 'cuda'
-            elif torch.backends.mps.is_available():  # Mac Silicon
+            elif torch and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
                 device = 'mps'
             else:
                 device = 'cpu'
-        except AttributeError:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        except (AttributeError, Exception):
+            device = 'cpu'
         model_kwargs = {'device': device}
         print(f"[INFO] Initializing CrossEncoder '{model_name}' on device: {device}")
         print(f"[RERANK] model={model_name} device={device} "
@@ -120,7 +162,7 @@ class InitializeQuesionAnsweringChain:
             prompt = QUERY_TRANSFORMATION_GERMAN
             
         print(f"[INFO] Transforming question for person: {self.person.name}")
-        transformed_query = self.llm.invoke(prompt.format(person=self.person.name, question=query))
+        transformed_query = _clean_single_line_output(self.llm.invoke(prompt.format(person=self.person.name, question=query)))
         print(f"[INFO] Original query: '{query}'")
         print(f"[INFO] Transformed query: '{transformed_query}'")
         return transformed_query
@@ -143,12 +185,12 @@ class InitializeQuesionAnsweringChain:
         if previous_question and previous_answer:
             print(f"[INFO] Condensing follow-up question with chat history...")
             chat_history = f"Human: {previous_question}\nAI: {previous_answer}"
-            query = self.llm.invoke(
+            query = _clean_single_line_output(self.llm.invoke(
                 CONDENSE_QUESTION_PROMPT.format(
                     chat_history=chat_history,
                     question=query,
                 )
-            )
+            ))
             print(f"[INFO] Condensed standalone question: '{query}'")
 
         print(f"[INFO] Starting QA with k_init={k_init}, top_n={top_n}, reranker={self.use_reranker}")
@@ -253,7 +295,7 @@ class InitializeQuesionAnsweringChain:
         
             prompt_text += eyewitness_suffix
 
-        final_answer = self.llm.invoke(prompt_text)
+        final_answer = _clean_answer_output(self.llm.invoke(prompt_text))
         print(f"[INFO] Factual Answer: {factual_answer}")
         print(f"[INFO] Final Impersonated Answer: {final_answer}")
         

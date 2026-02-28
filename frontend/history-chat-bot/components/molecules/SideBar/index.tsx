@@ -69,6 +69,8 @@ interface SideBarProps {
   setSearchKwargsNum: (searchKwargsNum: number) => void;
   selectedLanguage: string;
   setSelectedLanguage: (selectedLanguage: string) => void;
+  llmModel: string;
+  setLlmModel: (model: string) => void;
 }
 
 export const SideBar: FC<SideBarProps> = ({
@@ -102,6 +104,8 @@ export const SideBar: FC<SideBarProps> = ({
   setSearchKwargsNum,
   selectedLanguage,
   setSelectedLanguage,
+  llmModel,
+  setLlmModel,
 }) => {
   const [persons, setPersons] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -121,6 +125,7 @@ export const SideBar: FC<SideBarProps> = ({
     useState<boolean>(useEyewitnessMode);
   const [selectedLanguageInit, setSelectedLanguageInit] =
     useState<string>("en");
+  const [llmModelInit, setLlmModelInit] = useState<string>(llmModel);
   const toast = useToast();
   const alertedRef = useRef(false);
 
@@ -259,6 +264,7 @@ export const SideBar: FC<SideBarProps> = ({
     setEyewitnessMode(eyewitnessModeInit);
     setUseReranker(useRerankerInit);
     setSelectedLanguageInit(selectedLanguage);
+    setLlmModelInit(llmModel);
   };
 
   const applyChanges = async () => {
@@ -284,6 +290,7 @@ export const SideBar: FC<SideBarProps> = ({
 
     setSelectedVoice(selectedVoiceInit);
     setSelectedLanguage(selectedLanguageInit);
+    setLlmModel(llmModelInit);
     setSelected(selectedPerson);
     setChunkOverlapInit(chunkOverlap);
     setChunkSizeInit(chunkSize);
@@ -361,6 +368,25 @@ export const SideBar: FC<SideBarProps> = ({
           <option value="Male">Male (Only English TTS Supported)</option>
           <option value="Female">Female (Only English TTS Supported)</option>
           {hasVoice && <option value="Custom">Custom</option>}
+        </Select>
+      </div>
+
+      <div className="bg-white rounded-md">
+        <Select
+          color={"black"}
+          size={"sm"}
+          rounded={"md"}
+          value={llmModelInit}
+          onChange={(e) => setLlmModelInit(e.target.value)}
+          isDisabled={
+            selected == undefined ||
+            selected == "" ||
+            globalDisabled !== 0 ||
+            loading
+          }
+        >
+          <option value="Phi-3-mini-4k-instruct-q4.gguf">Phi-3 Mini (default)</option>
+          <option value="mistral-7b-instruct-v0.1.Q4_K_M.gguf">Mistral 7B</option>
         </Select>
       </div>
 
@@ -634,7 +660,8 @@ export const SideBar: FC<SideBarProps> = ({
                 useHybridSearch == useHybridSearchInit &&
                 splitterType == splitterTypeInit &&
                 useReranker == useRerankerInit &&
-                useEyewitnessMode == eyewitnessModeInit)
+                useEyewitnessMode == eyewitnessModeInit &&
+                llmModel == llmModelInit)
             }
             isLoading={loading}
             // className="mt-auto"

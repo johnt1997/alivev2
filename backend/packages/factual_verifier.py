@@ -1,4 +1,12 @@
-from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+from sentence_transformers import CrossEncoder as _CrossEncoder
+import numpy as _np
+
+class HuggingFaceCrossEncoder:
+    def __init__(self, model_name: str, model_kwargs: dict = None):
+        device = (model_kwargs or {}).get('device', 'cpu')
+        self._encoder = _CrossEncoder(model_name, device=device)
+    def score(self, sentence_pairs):
+        return _np.array(self._encoder.predict(sentence_pairs))
 
 class FactualVerifier:
     def __init__(self, model_name: str = "cross-encoder/stsb-roberta-base"):

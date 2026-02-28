@@ -1,9 +1,16 @@
 from typing import Tuple, Union, List
 import json
 import os
-import torch
-from TTS.api import TTS
-from playsound import playsound
+try:
+    import torch
+except (ImportError, OSError):
+    torch = None
+try:
+    from TTS.api import TTS
+    from playsound import playsound
+except (ImportError, OSError):
+    TTS = None
+    playsound = None
 
 
 class Person:

@@ -11,11 +11,15 @@ parser.add_argument("--person", default="Washington", help="Name der Person (Ord
 parser.add_argument("--splitter", required=True, choices=["recursive", "sentence_transformer", "semantic"], help="Splitter-Typ")
 parser.add_argument("--chunk_size", type=int, required=True, help="Chunk Größe (Zeichen/Tokens)")
 parser.add_argument("--chunk_overlap", type=int, required=True, help="Chunk Overlap (Zeichen/Tokens)")
+parser.add_argument("--include_size_in_path", action="store_true", help="Include chunk_size/overlap in output path")
 args = parser.parse_args()
 
 # Input/Output Pfade
 INPUT_DIR = f"./data/{args.person}"
-OUTPUT_DIR = f"./bm25_jsonl/{args.person}_{args.splitter}"  # WICHTIG: _splitter suffix!
+if args.include_size_in_path:
+    OUTPUT_DIR = f"./bm25_jsonl/{args.person}_{args.splitter}_{args.chunk_size}_{args.chunk_overlap}"
+else:
+    OUTPUT_DIR = f"./bm25_jsonl/{args.person}_{args.splitter}"  # WICHTIG: _splitter suffix!
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Dokumente chunken

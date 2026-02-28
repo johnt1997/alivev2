@@ -38,6 +38,7 @@ export default function Home() {
   const [selectedVoice, setSelectedVoice] = useState<string>("Male");
   const [relevantDocs, setRelevantDocs] = useState<RelevantDocuments[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("en");
+  const [llmModel, setLlmModel] = useState<string>("Phi-3-mini-4k-instruct-q4.gguf");
 
   useEffect(() => {
     if (selectedVoice !== "Custom" && selectedLanguage == "de") {
@@ -219,6 +220,8 @@ export default function Home() {
         setSearchKwargsNum={setSearchKwargsNum}
         selectedLanguage={selectedLanguage}
         setSelectedLanguage={setSelectedLanguage}
+        llmModel={llmModel}
+        setLlmModel={setLlmModel}
       />
       <ChatSection
         selected={selected}
@@ -242,6 +245,7 @@ export default function Home() {
         chunkOverlap={chunkOverlap}
         searchKwargsNum={searchKwargsNum}
         selectedLanguage={selectedLanguage}
+        llmModel={llmModel}
       />
       {modelUrl && (
         <CharacterSection
