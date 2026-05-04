@@ -10,3 +10,14 @@ backend/.env
 __pycache__/
 *.pyc
 .claude/
+
+# Local working files (thesis editing)
+nul
+1.png
+2.png
+chap5_feedback.txt
+masterarbeit_final_latex.txt
+vorgaenger.txt
+ma-arbeit_finalv*.pdf
+backend/results/results_all.zip
+.ipynb_checkpoints/

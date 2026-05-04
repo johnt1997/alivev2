@@ -132,7 +132,7 @@ def _get_qa_chain_and_person(params: Dict):
         return _chain_cache[cache_key]
 
     person = Person(name=params["person_name"], voice=params["voice"])
-    embeddings_instance = _get_embedding_instance(params["use_openai"])
+    embeddings_instance = _get_embedding_instance(False)  # always use local BGE for FAISS
     
     doc_processor = DocumentProcessing(embeddings=embeddings_instance)
     vectorstore_handler = VectorStoreHandler(embeddings=embeddings_instance, search_kwargs_num=params["search_kwargs_num"])

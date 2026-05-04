@@ -1,0 +1,43 @@
+,question,ground_truth,question_type
+0,What year was the European Coal and Steel Community (ECSC) established?,1952,factual
+1,Who proposed the ECSC?,Robert Schuman,factual
+2,Which countries were the founding members of the ECSC?,"France, Germany, Italy, Belgium, Luxembourg, and the Netherlands",factual
+3,What major geopolitical event increased U.S. pressure for European cooperation in the late 1940s?,The outbreak of the Korean War,factual
+4,What were the initial aims of the ECSC?,To pool coal and steel production to prevent war between France and Germany.,factual
+5,What alternative model did some French elites prefer over the community model?,The confederal or traditional model.,factual
+6,What did the EEC stand for?,European Economic Community,factual
+7,In what year was the EEC established?,1958,factual
+8,Which French bureaucrat was a significant advocate for European integration?,Jean Monnet,factual
+9,What was the main argument of structuralists regarding the formation of the EU?,The EU responded to objective structural imperatives due to postwar international interdependence.,reasoning
+10,"According to the document, how did ideas influence the development of the EU?","Ideas, particularly about integration, allowed leaders to select from various structural and institutional possibilities.",reasoning
+11,What was the response of the British government to the ECSC proposal?,The British refused to join any supranational plan.,factual
+12,What theory suggests that ideas can become causal factors in political outcomes?,Ideational theory.,factual
+13,What does the term 'spillover' refer to in the context of the EU's development?,The process by which initial cooperation in one area leads to further cooperation in other areas.,factual
+14,What role did French strategic choices play in the formation of the EEC?,French choices were pivotal in shaping the EEC as they insisted on strong institutional frameworks.,reasoning
+15,How did the ECSC influence the later establishment of the EEC?,The ECSC created supranational agents that later contributed to the development of the EEC.,multi_hop
+16,What were the criticisms against the Schuman Plan?,Critics argued it compromised France's great-power status and favored German interests.,factual
+17,Why did the EDC fail to gain ratification in France?,Internal opposition within French parties and the changing political landscape led to its rejection.,multi_hop
+18,What did the proponents of the community model advocate for in terms of European cooperation?,They advocated for supranational institutions that could lead Europe to peace and prosperity.,factual
+19,What alternative to the EDC emerged after its failure?,The Western European Union (WEU).,factual
+20,What was one major reason for the divergence in French elites' views on European integration?,Different interpretations of France's interests and its role in Europe.,reasoning
+21,What was the outcome of the EDC vote in the French assembly?,The EDC was rejected.,factual
+22,What did the traditionalist model prioritize in contrast to the community model?,Bilateral deals and maintaining France's traditional great power status.,reasoning
+23,What did the term 'multiple equilibria' refer to in the context of the document?,The existence of various viable options in decision-making processes.,factual
+24,Which two countries had significant influence on the EEC's development alongside France?,Germany and the Benelux countries.,multi_hop
+25,What was the main argument of institutionalists regarding the EEC's formation?,Institutional feedback from the ECSC led to the development of the EEC.,reasoning
+26,What did the 'Third Force' in French politics represent?,A coalition of pro-European parties advocating for integration.,factual
+27,How did the Korean War impact European integration efforts?,It increased U.S. pressure for European cooperation and rearmament.,reasoning
+28,What was one significant consequence of the ECSC that influenced later European cooperation?,It introduced a supranational framework that shaped future integration efforts.,reasoning
+29,How did leaders use agenda-setting authority in the context of European integration?,They could pass any option as long as it attracted majority support.,reasoning
+30,What was one of the main criticisms of the neofunctionalist account of the EEC's development?,It underestimates the role of national interests and leaders' choices.,reasoning
+31,What did the term 'battle of ideas' refer to in the context of French policymaking in the 1940s?,The competition between different ideologies regarding European integration and the role of France.,factual
+32,What was a significant ideological division within French elites regarding European cooperation?,The division between supporters of supranational institutions and those favoring traditional diplomatic approaches.,reasoning
+33,What was the primary aim of the Rome Treaty established in 1957?,"The primary aim of the Rome Treaty was to establish the European Economic Community (EEC) and achieve a customs union, which included the reduction of internal tariffs and the creation of a common external tariff.",factual
+34,Why did France walk out of European deliberations during the 1960s?,"France walked out of European deliberations due to tensions over losing veto rights, as the French government insisted on maintaining national prerogative and autonomy, clashing with the supranational tendencies of other EEC members.",reasoning
+35,What compromise was reached in January 1966 to resolve the tensions between France and other EEC member states?,"The compromise reached was dubbed the Luxembourg Compromise, allowing majority voting except on 'important matters,' which individual states could define, thus retaining a de facto veto right.",factual
+36,How did the economic landscape of the UK influence its decision to join the European Community in 1973?,"The UK decided to join the European Community in 1973 as its stagnating economy contrasted sharply with the booming post-war reconstruction on the continent, leading to a realization that Commonwealth connections could not substitute for access to European markets.",reasoning
+37,What role did the Common Agricultural Policy (CAP) play in the integration of European countries?,"The CAP aimed to stabilize agricultural markets and protect farmers from external competition, facilitating political support for further integration by ensuring that farmers, a significant interest group, received compensation in exchange for liberalizing trade in industrial goods.",reasoning
+38,What landmark case established the principle of 'direct effect' in European law?,"The landmark case that established the principle of 'direct effect' was Van Gend and Loos (case 26/62), where the European Court of Justice ruled that individuals could appeal directly to Community law if it granted them rights or obligations.",factual
+39,What were the consequences of the Luxembourg Compromise for the integration process of the European Union?,"The consequences of the Luxembourg Compromise included a setback for vertical integration and supranational decision-making, as it allowed individual states to retain veto rights over 'important matters,' hindering deeper integration.",reasoning
+40,"In what year was the European Community renamed the European Union, and what were the key agreements leading up to this change?",The European Community was renamed the European Union in 1992 following the signing of the Single European Act (SEA) in 1986 and the Maastricht Treaty.,factual
+41,How did the theories of neorealism and neoliberalism explain European cooperation?,"Neorealism explained European cooperation as a response to a common threat, emphasizing the balance of power and the need for survival, while neoliberalism focused on the pursuit of economic gains through reduced trade barriers and enhanced cooperation, suggesting that states act in their self-interest for absolute gains.",multi_hop

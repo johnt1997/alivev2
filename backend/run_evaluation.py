@@ -1,4 +1,4 @@
-j#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Vollständiges Evaluations-Script für alle RAG-Pipelines.
 
@@ -211,7 +211,7 @@ RAGAS_METRICS = [
 
 METRIC_COLUMNS = [
     'context_precision', 'faithfulness', 'answer_relevancy',
-    'context_recall', 'answer_correctness', 'semantic_similarity'
+    'context_recall', 'answer_correctness', 'answer_similarity'
 ]
 
 

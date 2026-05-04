@@ -171,9 +171,20 @@ npm run start
 
 # RAG Pipeline Evaluation
 
-The repository includes a complete evaluation framework for comparing different RAG pipeline configurations.
+The repository includes a complete evaluation framework for comparing different RAG pipeline configurations. All experimental results reported in the master's thesis can be reproduced from the artefacts in this repository.
 
-### Running Evaluations
+### 1. Generating Evaluation Questions
+
+For a new corpus (PDFs in `backend/data/<corpus>/`):
+
+```bash
+cd backend
+python create_questions.py --corpus Eu --output hilfreich2.csv --n 42
+```
+
+The Washington question set was generated previously with the RAGAS `TestsetGenerator` (single-hop, multi-hop specific, and multi-hop abstract synthesizers) and is checked in at `backend/autogen_questions/Washington/hilfreich.csv`. The EU question set in `backend/autogen_questions/Eu/hilfreich2.csv` was generated with `create_questions.py` (GPT-4o-mini).
+
+### 2. Running Evaluations
 
 ```bash
 cd backend
@@ -189,6 +200,9 @@ python run_evaluation.py --corpus Washington --pipelines dense_semantic --llm gp
 
 # Chunk-size experiment
 python run_evaluation.py --corpus Washington --pipelines dense_recursive --chunk-sizes 500 1000 1500 --output-dir chunk_size_experiment
+
+# Cross-corpus replication on EU data
+python run_evaluation.py --corpus Eu
 
 # Quick test with only 3 questions
 python run_evaluation.py --corpus Washington --limit 3
@@ -211,12 +225,39 @@ python run_evaluation.py --corpus Washington --limit 3
 - **Answer Correctness**: Does the answer match the ground truth?
 - **Semantic Similarity**: Embedding similarity to ground truth
 
-### Analysis
+All RAGAS-based metrics use OpenAI's `gpt-3.5-turbo-16k` as the judge model (RAGAS v0.1.3 default).
+
+### 3. Analysis & Reproducibility
 
 After running evaluations, use `mega_analysis_notebook.ipynb` to generate:
-- Aggregate statistics per pipeline
-- Statistical significance tests (Wilcoxon signed-rank)
-- Visualizations and comparison charts
+- Aggregate statistics per pipeline (means, std)
+- Statistical significance tests (paired Wilcoxon signed-rank with Holm correction, rank-biserial effect sizes)
+- Pearson-correlation analysis of RAGAS metrics
+- Visualizations: heatmaps, per-question-type bars, cross-corpus comparison charts
+
+For the cross-corpus comparison plot reported in Chapter 5 of the thesis, run:
+
+```bash
+cd backend
+python cross_corpus_plot.py
+```
+
+### Result Directory Layout
+
+```
+backend/results/
+├── Washington/
+│   ├── final_run_42Q/          # Main 12-pipeline evaluation (Chapter 5 results)
+│   ├── chunk_size_experiment/  # Robustness check (500/1000/1500 chunks)
+│   ├── llm_comparison/         # Mistral vs. GPT-3.5 vs. Phi-3
+│   └── final_run_slm/          # Small-LM comparison
+├── Eu/
+│   └── final_run/              # Cross-corpus replication
+├── results_all/                # Aggregated copy of all final runs
+└── cross_corpus_comparison.png # Plot used in the thesis
+```
+
+Each pipeline run produces two CSVs: `<pipeline>_answers_raw.csv` (per-question outputs) and `<pipeline>_final_results.csv` (per-question RAGAS scores plus configuration metadata).
 
 # Complete Project Structure
 
