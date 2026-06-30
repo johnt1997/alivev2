@@ -1,7 +1,10 @@
 backend/models/
 backend/Miniforge3-MacOSX-arm64.sh
 backend/Dockerfile
-backend/data
+backend/data/*
+!backend/data/Washington/
+!backend/data/Eu/
+.DS_Store
 backend/bm25_indexes
 backend/analysis_results
 backend/database/
