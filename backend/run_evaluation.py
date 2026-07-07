@@ -29,6 +29,8 @@ import json
 import subprocess
 import pandas as pd
 from tqdm import tqdm
+from dotenv import load_dotenv
+load_dotenv()  # OPENAI_API_KEY wird immer gebraucht (RAGAS-Judge), nicht nur bei --llm gpt35
 
 # Umgebungsvariablen setzen BEVOR torch importiert wird
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
@@ -51,6 +53,13 @@ from ragas.metrics import (
     answer_correctness,
     answer_similarity,
 )
+
+# GPU-Layer-Override via Env-Var (muss VOR dem llm_config-Import passieren,
+# da llm_config N_GPU_LAYERS beim Import bindet). Auf der GPU-VM: GPU_LAYERS=-1
+import packages.globals as _globals
+if os.environ.get("GPU_LAYERS"):
+    _globals.N_GPU_LAYERS = int(os.environ["GPU_LAYERS"])
+    print(f"[CONFIG] N_GPU_LAYERS = {_globals.N_GPU_LAYERS} (from GPU_LAYERS env)")
 
 from packages.person import Person
 from packages.globals import EMBEDDINGS
@@ -274,6 +283,8 @@ def run_single_pipeline(
     questions: list,
     llm,
     search_kwargs_num: int = 3,
+    impersonate: bool = True,
+    prompt_style: str = "mistral",
 ) -> list:
     """
     Führt eine einzelne Pipeline aus und gibt die Antworten zurück.
@@ -351,7 +362,9 @@ def run_single_pipeline(
         db=db,
         person=person,
         search_kwargs_num=search_kwargs_num,
-        use_reranker=use_reranker
+        use_reranker=use_reranker,
+        impersonate=impersonate,
+        prompt_style=prompt_style
     )
 
     # Antworten generieren
@@ -370,7 +383,9 @@ def run_ragas_evaluation(df_generated: pd.DataFrame, ground_truths: list) -> pd.
     df_generated['ground_truths'] = df_generated['ground_truth'].apply(lambda x: [x])
 
     ragas_dataset = Dataset.from_pandas(df_generated)
-    ragas_results = evaluate(ragas_dataset, metrics=RAGAS_METRICS)
+    # raise_exceptions=False: einzelne kaputte Judge-Antworten (JSON-Drift von
+    # gpt-3.5-turbo) werden NaN statt den ganzen Lauf abzubrechen
+    ragas_results = evaluate(ragas_dataset, metrics=RAGAS_METRICS, raise_exceptions=False)
 
     df_ragas_scores = ragas_results.to_pandas()
     df_scores_only = df_ragas_scores[METRIC_COLUMNS]
@@ -409,8 +424,21 @@ def main():
                         help="Unterordner für Results (default: final_run)")
     parser.add_argument("--questions-file", help="CSV mit Fragen (default: autogen_questions/{corpus}/hilfreich.csv)")
     parser.add_argument("--limit", type=int, help="Nur erste N Fragen (für Tests)")
+    parser.add_argument("--no-impersonation", action="store_true",
+                        help="Clean-Eval-Modus: faktische Antwort direkt evaluieren "
+                             "(keine Impersonation, kein Eyewitness-Suffix) — für RQ2-Rerun")
+    parser.add_argument("--prompt-style", default="auto", choices=["auto", "mistral", "plain", "phi3"],
+                        help="Chat-Template für QA/Query-Prompts. 'auto' wählt passend zum --llm "
+                             "(mistral->mistral, gpt35->plain, phi3->phi3)")
 
     args = parser.parse_args()
+
+    # Prompt-Style auflösen
+    if args.prompt_style == "auto":
+        prompt_style = {"mistral": "mistral", "gpt35": "plain", "phi3": "phi3", "custom": "mistral"}[args.llm]
+    else:
+        prompt_style = args.prompt_style
+    print(f"[CONFIG] prompt_style={prompt_style}, impersonation={'OFF' if args.no_impersonation else 'ON'}")
 
     # Fragen laden
     questions_file = args.questions_file or f"./autogen_questions/{args.corpus}/hilfreich.csv"
@@ -464,6 +492,8 @@ def main():
                 output_name = f"{pipeline_name}_{args.llm}"
             else:
                 output_name = pipeline_name
+            if args.no_impersonation:
+                output_name += "_clean"
 
             print(f"\n{'='*60}")
             print(f"RUNNING: {output_name}")
@@ -476,6 +506,8 @@ def main():
                     config=config,
                     questions=eval_questions,
                     llm=llm,
+                    impersonate=not args.no_impersonation,
+                    prompt_style=prompt_style,
                 )
 
                 df_results = pd.DataFrame(generated_answers)

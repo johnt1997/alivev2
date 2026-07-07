@@ -26,7 +26,7 @@ def _clean_answer_output(text: str) -> str:
         r'\nI don\'t know\.',   # repeated fallback phrase
         r'\nReformulated Answer:', r'\nreformulated answer:',
         r'\nSolution:', r'\nAnswer=', r'\nanswer=',
-        r'\nNote:', r'\n\(Note', r'\n```',
+        r'\n- response:', r'\nNote:', r'\n\(Note', r'\n```',
     ):
         m = re.search(pattern, text)
         if m:
@@ -56,6 +56,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores.faiss import FAISS
 from packages.globals import CHAIN_TYPE, SEARCH_KWARGS_NUM
 from prompts.qa_chain_prompt import STRICT_QA_PROMPT, STRICT_QA_PROMPT_GERMAN
+from prompts.prompt_styles import get_qa_prompt, get_query_transformation_prompt
 from prompts.translation_prompt import TRANSLATE, TRANSLATE_OPENAI
 from prompts.impersonation_prompt import IMPERSONATION_PROMPT
 from prompts.impersonation_prompt_with_personality import (
@@ -81,14 +82,21 @@ class InitializeQuesionAnsweringChain:
         language: str = "en",
         #factuality_threshold: float = 0.4,
         use_reranker: bool = True,
-        eyewitness_mode: bool= True
-        
+        eyewitness_mode: bool= True,
+        impersonate: bool = True,
+        prompt_style: str = "mistral"
+
     ):
         self.llm = llm
         self.chain_type = chain_type
         self.retriever = retriever
         self.db = db
         self.eyewitness_mode = eyewitness_mode
+        # Clean-Eval-Modus fuer RQ2: impersonate=False evaluiert die faktische
+        # Antwort direkt (keine Umformulierung, kein Eyewitness-Suffix).
+        self.impersonate = impersonate
+        # "mistral" | "plain" | "phi3" — Chat-Template passend zum Generator-LLM
+        self.prompt_style = prompt_style
         self.use_reranker = use_reranker
         self.cross_encoder = None
         self.search_kwargs_num = search_kwargs_num
@@ -121,7 +129,7 @@ class InitializeQuesionAnsweringChain:
         model_kwargs = {'device': device}
         print(f"[INFO] Initializing CrossEncoder '{model_name}' on device: {device}")
         print(f"[RERANK] model={model_name} device={device} "
-        f"torch={torch.__version__} sbert={st_ver} "
+        f"torch={torch.__version__ if torch else 'n/a'} sbert={st_ver} "
           f"np={np.__version__}")
         try:
             self.cross_encoder = HuggingFaceCrossEncoder(model_name=model_name, model_kwargs=model_kwargs)
@@ -157,7 +165,7 @@ class InitializeQuesionAnsweringChain:
 
     def _transform_question(self, query: str) -> str:
         """Transforms a user-facing question into a third-person query for retrieval."""
-        prompt = QUERY_TRANSFORMATION
+        prompt = get_query_transformation_prompt(self.prompt_style)
         if self.language == "de":
             prompt = QUERY_TRANSFORMATION_GERMAN
             
@@ -200,12 +208,19 @@ class InitializeQuesionAnsweringChain:
         orig_k = getattr(self.retriever, "k", top_n)
         orig_dense = getattr(self.retriever, "dense_k", None)
         orig_bm25  = getattr(self.retriever, "bm25_k", None)
+        orig_search_k = None  # dense VectorStoreRetriever: k liegt in search_kwargs, nicht als Attribut
 
         docs_with_scores: list[tuple] = []   # <— NEU: safe default
         try:
         # Kandidatenpool hochdrehen
             if hasattr(self.retriever, "set_k_init"):
                 self.retriever.set_k_init(k_init)   # setzt k, dense_k, bm25_k
+            elif hasattr(self.retriever, "search_kwargs") and isinstance(self.retriever.search_kwargs, dict):
+                # BUGFIX: LangChain VectorStoreRetriever hat KEIN .k-Attribut —
+                # der alte hasattr(.k)-Zweig schlug hier still fehl, sodass dense
+                # Pipelines nur top_n (statt k_init) Kandidaten fürs Reranking holten.
+                orig_search_k = self.retriever.search_kwargs.get("k", top_n)
+                self.retriever.search_kwargs["k"] = k_init
             else:
                 if hasattr(self.retriever, "k"):       self.retriever.k = k_init
                 if hasattr(self.retriever, "dense_k"): self.retriever.dense_k = max(2*k_init, k_init)
@@ -229,6 +244,8 @@ class InitializeQuesionAnsweringChain:
             if orig_k     is not None and hasattr(self.retriever, "k"):       self.retriever.k = orig_k
             if orig_dense is not None and hasattr(self.retriever, "dense_k"): self.retriever.dense_k = orig_dense
             if orig_bm25  is not None and hasattr(self.retriever, "bm25_k"):  self.retriever.bm25_k  = orig_bm25
+            if orig_search_k is not None:
+                self.retriever.search_kwargs["k"] = orig_search_k
             
         # 3) Reranking (oder Top-N Selection)
         if self.use_reranker and self.cross_encoder and docs_with_scores:
@@ -249,7 +266,7 @@ class InitializeQuesionAnsweringChain:
             print("[WARN] No documents available for context.")
         
         # 5) LLM Antwort generieren
-        prompt = STRICT_QA_PROMPT 
+        prompt = get_qa_prompt(self.prompt_style)
         if context:
             factual_answer = self.llm.invoke(prompt.format(question=query, context=context))
         else:
@@ -257,47 +274,44 @@ class InitializeQuesionAnsweringChain:
 
         final_answer = factual_answer # Default to the factual answer
 
-
-        if self.person.personality is not None:
-            print("[INFO] Impersonating answer with personality...")
-            personality_prompt = IMPERSONATION_PROMPT_WITH_PERSONALITY
-             #final_answer = self.llm.invoke(
-            #personality_prompt.format(
-                #person=self.person.name,
-                #answer=factual_answer,
-                #personality=self.person.format_personality_prompt(),
-            #)
-            prompt_text = personality_prompt.format(
-                person=self.person.name,
-                answer=factual_answer,
-                personality=self.person.format_personality_prompt(),
-        )
+        if not self.impersonate:
+            # Clean-Eval-Modus (RQ2-Rerun): die faktische Antwort geht direkt in
+            # die Evaluation — keine Umformulierung, kein Eyewitness-Suffix.
+            final_answer = _clean_answer_output(factual_answer)
+            print("[INFO] Impersonation disabled — evaluating factual answer directly.")
+            print(f"[INFO] Factual Answer: {final_answer}")
         else:
-            # Use the simple impersonation prompt
-            print("[INFO] Impersonating answer without personality...")
-            impersonation_prompt = IMPERSONATION_PROMPT
-            #final_answer = self.llm.invoke(
-                #mpersonation_prompt.format(person=self.person.name, answer=factual_answer)
-            #)
-            prompt_text = impersonation_prompt.format(
-                person=self.person.name,
-                answer=factual_answer
-            
-            )
-        if self.eyewitness_mode:
-            eyewitness_suffix = (
-                "\n\n[Eyewitness] Ergänze am Ende 1–2 sehr kurze Sätze aus heutiger "
-                "Zeitzeug*innen-Perspektive. Keine neuen Fakten. Kennzeichne mit 'Eyewitness:'."
-            if self.language == "de" else
-                "\n\n[Eyewitness] Append 1–2 very short sentences from a present-day "
-                "eyewitness perspective at the end that directly address the question from today's perspective. Do not add new facts. Prefix with 'Eyewitness:'."
-            )
-        
-            prompt_text += eyewitness_suffix
+            if self.person.personality is not None:
+                print("[INFO] Impersonating answer with personality...")
+                personality_prompt = IMPERSONATION_PROMPT_WITH_PERSONALITY
+                prompt_text = personality_prompt.format(
+                    person=self.person.name,
+                    answer=factual_answer,
+                    personality=self.person.format_personality_prompt(),
+                )
+            else:
+                # Use the simple impersonation prompt
+                print("[INFO] Impersonating answer without personality...")
+                impersonation_prompt = IMPERSONATION_PROMPT
+                prompt_text = impersonation_prompt.format(
+                    person=self.person.name,
+                    answer=factual_answer
 
-        final_answer = _clean_answer_output(self.llm.invoke(prompt_text))
-        print(f"[INFO] Factual Answer: {factual_answer}")
-        print(f"[INFO] Final Impersonated Answer: {final_answer}")
+                )
+            if self.eyewitness_mode:
+                eyewitness_suffix = (
+                    "\n\n[Eyewitness] Ergänze am Ende 1–2 sehr kurze Sätze aus heutiger "
+                    "Zeitzeug*innen-Perspektive. Keine neuen Fakten. Kennzeichne mit 'Eyewitness:'."
+                if self.language == "de" else
+                    "\n\n[Eyewitness] Append 1–2 very short sentences from a present-day "
+                    "eyewitness perspective at the end that directly address the question from today's perspective. Do not add new facts. Prefix with 'Eyewitness:'."
+                )
+
+                prompt_text += eyewitness_suffix
+
+            final_answer = _clean_answer_output(self.llm.invoke(prompt_text))
+            print(f"[INFO] Factual Answer: {factual_answer}")
+            print(f"[INFO] Final Impersonated Answer: {final_answer}")
         
         # 6) Factuality Score berechnen
         factuality_score = self.verifier.score(context, factual_answer) if context else 0.0
