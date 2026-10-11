@@ -6,6 +6,7 @@ backend/data/*
 !backend/data/Eu/
 .DS_Store
 backend/bm25_indexes
+backend/bm25_jsonl/
 backend/analysis_results
 backend/database/
 backend/venv*/
@@ -24,3 +25,15 @@ vorgaenger.txt
 ma-arbeit_finalv*.pdf
 backend/results/results_all.zip
 .ipynb_checkpoints/
+
+# Local working files (paper, presentation, rerun transfer)
+6a064b63498764e0feff71aa/
+presentation/
+rerun_package.zip
+rerun_results.zip
+overleaf.txt
+quellen.txt
+/*.png
+
+# Human-eval originals as returned by raters (contain personal metadata)
+backend/human_eval/*_mit_antworten.xlsx

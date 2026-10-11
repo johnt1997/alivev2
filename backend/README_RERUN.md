@@ -154,7 +154,7 @@ know"-Antworten ohne prüfbare Aussagen und bleiben per Design NaN).
 ## Auswertung danach
 
 - **RQ2**: Mittelwerte (F, AR, CP, CR) der 3 Läufe in `llm_comparison_clean/`
-  vergleichen. Diese Zahlen ersetzen die alten aus `llm_comparison/`.
+  vergleichen. Diese Zahlen ersetzen die alten (archiviert in `results/_superseded/Washington/llm_comparison/`).
 - **RQ1c**: `dense_*_rerank` (neu, k_init=10) gegen die bestehenden `dense_*`
   (final_run, ohne Rerank) paaren — Wilcoxon + Holm wie gehabt. Die alten
   `dense_*_rerank`-Läufe sind obsolet. Die hybrid-Läufe waren nicht betroffen

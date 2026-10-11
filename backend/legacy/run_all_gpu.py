@@ -62,7 +62,7 @@ from ragas.metrics import (
 if BUILD_BM25:
     print("\n[STEP 0] Building BM25 indices...")
     import subprocess
-    rc = subprocess.run([sys.executable, "prebuild_all_recursive.py"]).returncode
+    rc = subprocess.run([sys.executable, "-m", "legacy.prebuild_all_recursive"]).returncode
     if rc != 0:
         print("[WARN] BM25 build had issues — hybrid pipelines may fail")
     else:

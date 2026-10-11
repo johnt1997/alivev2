@@ -5,7 +5,7 @@
 # Usage:
 #   chmod +x setup_gpu_vm.sh
 #   ./setup_gpu_vm.sh
-#   python run_all_gpu.py
+#   python run_evaluation.py --corpus Washington   (siehe README_RERUN.md)
 
 set -e
 
@@ -25,5 +25,5 @@ python -c "from pyserini.search.lucene import LuceneSearcher; print('Pyserini OK
 
 echo ""
 echo "=== Setup complete! ==="
-echo "Now run:  python run_all_gpu.py"
+echo "Now run:  python run_evaluation.py --corpus Washington  (oder: bash rerun_fixes.sh)"
 echo ""

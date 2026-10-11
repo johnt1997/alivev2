@@ -247,15 +247,20 @@ python cross_corpus_plot.py
 ```
 backend/results/
 ├── Washington/
-│   ├── final_run_42Q/          # Main 12-pipeline evaluation (Chapter 5 results)
-│   ├── chunk_size_experiment/  # Robustness check (500/1000/1500 chunks)
-│   ├── llm_comparison/         # Mistral vs. GPT-3.5 vs. Phi-3
-│   └── final_run_slm/          # Small-LM comparison
+│   ├── final_run_42Q/              # Main 12-pipeline evaluation
+│   ├── final_run_42Q_kinit_fixed/  # Dense ± rerank rerun with corrected candidate pool
+│   ├── chunk_size_experiment/      # Robustness check (500/1000/1500 chunks)
+│   └── llm_comparison_clean/       # Mistral vs. GPT-3.5 vs. Phi-3 (model-appropriate prompts)
 ├── Eu/
-│   └── final_run/              # Cross-corpus replication
-├── results_all/                # Aggregated copy of all final runs
-└── cross_corpus_comparison.png # Plot used in the thesis
+│   ├── final_run/                  # Cross-corpus replication
+│   └── final_run_kinit_fixed/      # Dense ± rerank rerun with corrected candidate pool
+├── _superseded/                    # Historical runs kept for transparency (see its README)
+└── cross_corpus_comparison.png     # Cross-corpus plot
 ```
+
+The corrected evaluation protocol and the rerun procedure are documented in
+`backend/README_RERUN.md`; the human validation of the RAGAS judge lives in
+`backend/human_eval/`.
 
 Each pipeline run produces two CSVs: `<pipeline>_answers_raw.csv` (per-question outputs) and `<pipeline>_final_results.csv` (per-question RAGAS scores plus configuration metadata).
 
@@ -275,7 +280,9 @@ History-Chat-Bot
 │   ├── prompts                 # LLM prompt templates
 │   ├── autogen_questions       # Evaluation question sets
 │   ├── results                 # Evaluation results (CSV)
-│   ├── bm25_jsonl              # BM25 indices for hybrid search
+│   ├── human_eval              # Human validation of the RAGAS judge
+│   ├── legacy                  # Earlier runner scripts (see its README)
+│   ├── bm25_jsonl              # BM25 input files (auto-generated)
 │   ├── .env
 │   ├── server.py               # Backend API server
 │   ├── run_evaluation.py       # Evaluation script
